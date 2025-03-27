@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dragon Ball Hunter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+
+        :root {
+            --primary-color: #ff8c00;
+            --secondary-color: #f5f5f5;
+            --accent-color: #ff5722;
+            --dark-color: #333;
+            --light-color: #fff;
+        }
+
+        body {
+            background-color: var(--secondary-color);
+            color: var(--dark-color);
+            height: 100vh;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            position: relative;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: var(--light-color);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        header h1 {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .collected-balls {
+            background-color: var(--accent-color);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-weight: bold;
+        }
+
+        #camera-container, #map-container, #dragon-balls-collection {
+            flex: 1;
+            position: relative;
+            display: none;
+        }
+
+        #camera-container.active, #map-container.active, #dragon-balls-collection.active {
+            display: block;
+        }
+
+        #camera-view {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        #ar-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        #radar-container {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 80px;
+            height: 80px;
+            z-index: 5;
+        }
+
+        #radar {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background-color: rgba(0, 0, 0, 0.3);
+            position: relative;
+            border: 2px solid var(--primary-color);
+        }
+
+        #radar-center {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: var(--primary-color);
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        #radar-sweep {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            top: 0;
+            left: 40px;
+            background: linear-gradient(90deg, transparent 50%, rgba(255, 140, 0, 0.4) 100%);
+            border-radius: 0 40px 40px 0;
+            transform-origin: left center;
+            animation: radar-sweep 3s infinite linear;
+        }
+
+        @keyframes radar-sweep {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        nav {
+            display: flex;
+            background-color: var(--dark-color);
+            z-index: 10;
+        }
+
+        nav button {
+            flex: 1;
+            padding: 15px;
+            background: none;
+            border: none;
+            color: var(--light-color);
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        nav button.active {
+            background-color: var(--primary-color);
+        }
+
+        #dragon-balls-collection {
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        #dragon-balls-collection h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: var(--primary-color);
+        }
+
+        .balls-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 0 auto;
+            max-width: 400px;
+        }
+
+        .ball-slot {
+            position: relative;
+            aspect-ratio: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.05);
+            border-radius: 10px;
+        }
+
+        .empty-ball {
+            width: 70%;
+            height: 70%;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #d1d1d1, #f5f5f5);
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .dragon-ball {
+            width: 80%;
+            height: 80%;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #ffc107, #ff8c00);
+            box-shadow: 0 0 15px rgba(255, 140, 0, 0.7);
+            position: relative;
+        }
+
+        .dragon-ball::after {
+            content: attr(data-stars);
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #ff3d00;
+        }
+
+        #splash-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #ff8c00, #ff5722);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .splash-content {
+            text-align: center;
+            color: white;
+            padding: 20px;
+        }
+
+        .splash-logo {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .splash-content h1 {
+            font-size: 2rem;
+            margin: 20px 0;
+        }
+
+        .splash-content p {
+            margin-bottom: 30px;
+        }
+
+        #start-btn, #collect-btn, #allow-permissions-btn, #tutorial-close-btn, #restart-btn {
+            background-color: white;
+            color: var(--primary-color);
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        #start-btn:hover, #collect-btn:hover, #allow-permissions-btn:hover, #tutorial-close-btn:hover, #restart-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            max-width: 80%;
+        }
+
+        .modal-content h2 {
+            color: var(--primary-color);
+            margin-bottom: 20px;
+        }
+
+        .modal-content p {
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+
+        #found-ball {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 20px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #ffc107, #ff8c00);
+            box-shadow: 0 0 20px rgba(255, 140, 0, 0.7);
+            position: relative;
+        }
+
+        #found-ball::after {
+            content: attr(data-stars);
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2rem;
+            font-weight: bold;
+            color: #ff3d00;
+        }
+
+        #stars-count {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        #shenron-animation {
+            height: 150px;
+            margin: 20px 0;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 100"><path d="M30,80 Q100,20 170,80" stroke="green" stroke-width="10" fill="none" stroke-linecap="round"/><circle cx="170" cy="80" r="15" fill="green"/><path d="M165,70 L175,65 L165,65 Z" fill="red"/></svg>') no-repeat center;
+            animation: float 3s infinite ease-in-out;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <h1>Dragon Ball Hunter</h1>
+            <div class="collected-balls">
+                <span id="collected-count">0</span>/7
+            </div>
+        </header>
+        
+        <div id="camera-container">
+            <video id="camera-view" autoplay playsinline></video>
+            <div id="ar-overlay"></div>
+            <div id="radar-container">
+                <div id="radar">
+                    <div id="radar-center"></div>
+                    <div id="radar-sweep"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="dragon-balls-collection">
+            <h2>Dragon Balls Collection</h2>
+            <div class="balls-grid">
+                <div class="ball-slot" data-stars="1"><div class="empty-ball"></div></div>
+                <div class="ball-slot" data-stars="2"><div class="empty-ball"></div></div>
+                <div class="ball-slot" data-stars="3"><div class="empty-ball"></div></div>
+                <div class="ball-slot" data-stars="4"><div class="empty-ball"></div></div>
+                <div class="ball-slot" data-stars="5"><div class="empty-ball"></div></div>
+                <div class="ball-slot" data-stars="6"><div class="empty-ball"></div></div>
+                <div class="ball-slot" data-stars="7"><div class="empty-ball"></div></div>
+            </div>
+        </div>
+        
+        <div id="map-container">
+            <div id="map"></div>
+        </div>
+        
+        <nav>
+            <button id="map-btn" class="active">Map</button>
+            <button id="camera-btn">Camera</button>
+            <button id="collection-btn">Collection</button>
+        </nav>
+        
+        <div id="splash-screen">
+            <div class="splash-content">
+                <svg class="splash-logo" viewBox="0 0 100 100" width="150" height="150">
+                    <circle cx="50" cy="50" r="40" fill="#f9a825"/>
+                    <circle cx="50" cy="50" r="35" fill="#ffb300"/>
+                    <circle cx="50" cy="50" r="30" fill="#ffc107"/>
+                    <circle cx="35" cy="40" r="5" fill="#ff6f00"/>
+                    <circle cx="55" cy="35" r="6" fill="#ff6f00"/>
+                    <circle cx="70" cy="45" r="4" fill="#ff6f00"/>
+                    <circle cx="45" cy="60" r="7" fill="#ff6f00"/>
+                </svg>
+                <h1>Dragon Ball Hunter</h1>
+                <p>Find all 7 Dragon Balls to summon Shenron!</p>
+                <button id="start-btn">Start Adventure</button>
+            </div>
+        </div>
+        
+        <div id="ball-found-modal" class="modal">
+            <div class="modal-content">
+                <h2>You found a Dragon Ball!</h2>
+                <div id="found-ball"></div>
+                <div id="stars-count"></div>
+                <button id="collect-btn">Collect</button>
+            </div>
+        </div>
+        
+        <div id="permissions-modal" class="modal">
+            <div class="modal-content">
+                <h2>Permissions Required</h2>
+                <p>This game needs access to your camera and location to find Dragon Balls in the real world.</p>
+                <button id="allow-permissions-btn">Allow Permissions</button>
+            </div>
+        </div>
+        
+        <div id="tutorial-modal" class="modal">
+            <div class="modal-content">
+                <h2>How to Play</h2>
+                <p>1. Explore the real world using the map</p>
+                <p>2. When near a Dragon Ball, switch to camera view</p>
+                <p>3. Look around to find the Dragon Ball</p>
+                <p>4. Tap on it to collect</p>
+                <p>5. Collect all 7 to summon Shenron!</p>
+                <button id="tutorial-close-btn">Got it!</button>
+            </div>
+        </div>
+
+        <div id="wish-modal" class="modal">
+            <div class="modal-content">
+                <h2>You have summoned Shenron!</h2>
+                <div id="shenron-animation"></div>
+                <p>Make a wish...</p>
+                <button id="restart-btn">Play Again</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap" async defer></script>
+    <script>
+        const config = {
+            detectionRadius: 100,
+            locationUpdateInterval: 10000,
+            dragonBallStayDuration: 3600000,
+            appearanceChance: 0.7,
+            radarSweepSpeed: 3,
+            vibrationPattern: [200, 100, 200],
+            debugMode: false
+        };
+
+        let map, userMarker, dragonBalls = [];
+        let currentPosition = null;
+        let collectedBalls = 0;
+        let activeDragonBall = null;
+        let activeView = 'map';
+        let cameraStream = null;
+
+        document.addEventListener('DOMContentLoaded', initApp);
+
+        function initApp() {
+            document.getElementById('start-btn').addEventListener('click', startGame);
+            document.getElementById('map-btn').addEventListener('click', () => switchView('map'));
+            document.getElementById('camera-btn').addEventListener('click', () => switchView('camera'));
+            document.getElementById('collection-btn').addEventListener('click', () => switchView('collection'));
+            document.getElementById('collect-btn').addEventListener('click', collectDragonBall);
+            document.getElementById('allow-permissions-btn').addEventListener('click', requestPermissions);
+            document.getElementById('tutorial-close-btn').addEventListener('click', closeTutorial);
+            document.getElementById('restart-btn').addEventListener('click', restartGame);
+            generateDragonBalls();
+        }
+
+        function startGame() {
+            document.getElementById('splash-screen').style.display = 'none';
+            document.getElementById('permissions-modal').classList.add('active');
+        }
+
+        function requestPermissions() {
+            document.getElementById('permissions-modal').classList.remove('active');
+            
+            // Solicitar permisos de ubicación
+            const geoPromise = new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(
+                    position => resolve(position),
+                    error => reject(error),
+                    { enableHighAccuracy: true }
+                );
+            });
+
+            // Solicitar permisos de cámara
+            const mediaPromise = navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: 'environment',
+                    width: { ideal: 1920 },
+                    height: { ideal: 1080 }
+                }
+            }).then(stream => {
+                cameraStream = stream;
+                const videoElement = document.getElementById('camera-view');
+                videoElement.srcObject = stream;
+                return stream;
+            });
+
+            Promise.all([geoPromise, mediaPromise])
+                .then(() => {
+                    document.getElementById('tutorial-modal').classList.add('active');
+                    switchView('map');
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Debes permitir ambos permisos para jugar');
+                    document.getElementById('permissions-modal').classList.add('active');
+                    // Detener cualquier stream de cámara
+                    if (cameraStream) {
+                        cameraStream.getTracks().forEach(track => track.stop());
+                    }
+                });
+        }
+
+        function closeTutorial() {
+            document.getElementById('tutorial-modal').classList.remove('active');
+        }
+
+        function switchView(view) {
+            activeView = view;
+            document.getElementById('map-container').classList.remove('active');
+            document.getElementById('camera-container').classList.remove('active');
+            document.getElementById('dragon-balls-collection').classList.remove('active');
+            document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`${view}-container`).classList.add('active');
+            document.getElementById(`${view}-btn`).classList.add('active');
+            if (view === 'camera') checkForNearbyDragonBalls();
+        }
+
+        window.initMap = function() {
+            map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 17,
+                mapTypeId: 'roadmap',
+                streetViewControl: false,
+                mapTypeControl: false,
+                fullscreenControl: false,
+                zoomControl: true
+            });
+            
+            userMarker = new google.maps.Marker({
+                map: map,
+                icon: {
+                    path: google.maps.SymbolPath.CIRCLE,
+                    scale: 10,
+                    fillColor: '#4285F4',
+                    fillOpacity: 1,
+                    strokeColor: '#ffffff',
+                    strokeWeight: 2
+                }
+            });
+            
+            startLocationTracking();
+            placeDragonBallsOnMap();
+        }
+
+        function startLocationTracking() {
+            if (navigator.geolocation) {
+                navigator.geolocation.watchPosition(
+                    position => {
+                        const latLng = {
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude
+                        };
+                        currentPosition = latLng;
+                        userMarker.setPosition(latLng);
+                        map.setCenter(latLng);
+                        if (activeView === 'camera') checkForNearbyDragonBalls();
+                    },
+                    error => console.error('Error getting location:', error),
+                    { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
+                );
+            }
+        }
+
+        function generateDragonBalls() {
+            dragonBalls = [];
+            for (let i = 1; i <= 7; i++) {
+                dragonBalls.push({
+                    id: i,
+                    stars: i,
+                    collected: false,
+                    position: null
+                });
+            }
+        }
+
+        function placeDragonBallsOnMap() {
+            const checkPosition = setInterval(() => {
+                if (currentPosition) {
+                    clearInterval(checkPosition);
+                    dragonBalls.forEach(ball => {
+                        if (!ball.collected) {
+                            const randomPosition = getRandomPositionAround(currentPosition, 1000);
+                            ball.position = randomPosition;
+                            if (config.debugMode) {
+                                ball.marker = new google.maps.Marker({
+                                    position: randomPosition,
+                                    map: map,
+                                    title: `${ball.stars}-Star Dragon Ball`,
+                                    icon: {
+                                        path: google.maps.SymbolPath.CIRCLE,
+                                        scale: 8,
+                                        fillColor: '#FFC107',
+                                        fillOpacity: 0.8,
+                                        strokeColor: '#FF8F00',
+                                        strokeWeight: 2
+                                    }
+                                });
+                            }
+                        }
+                    });
+                }
+            }, 1000);
+        }
+
+        function getRandomPositionAround(center, radius) {
+            const radiusInDegrees = radius / 111000;
+            const angle = Math.random() * Math.PI * 2;
+            const distance = Math.sqrt(Math.random()) * radiusInDegrees;
+            return {
+                lat: center.lat + distance * Math.cos(angle),
+                lng: center.lng + distance * Math.sin(angle)
+            };
+        }
+
+        function checkForNearbyDragonBalls() {
+            if (!currentPosition) return;
+            
+            const nearbyBall = dragonBalls.find(ball => {
+                if (ball.collected || !ball.position) return false;
+                const distance = getDistanceInMeters(
+                    currentPosition.lat, currentPosition.lng,
+                    ball.position.lat, ball.position.lng
+                );
+                return distance <= config.detectionRadius;
+            });
+            
+            if (nearbyBall && Math.random() <= config.appearanceChance) {
+                activeDragonBall = nearbyBall;
+                const arOverlay = document.getElementById('ar-overlay');
+                arOverlay.innerHTML = '';
+                const ballElement = document.createElement('div');
+                ballElement.className = 'dragon-ball ar-dragon-ball';
+                ballElement.style.left = `${20 + Math.random() * 60}%`;
+                ballElement.style.top = `${20 + Math.random() * 60}%`;
+                ballElement.style.width = '80px';
+                ballElement.style.height = '80px';
+                ballElement.setAttribute('data-stars', nearbyBall.stars);
+                ballElement.addEventListener('click', showFoundBallModal);
+                arOverlay.appendChild(ballElement);
+                if (navigator.vibrate) navigator.vibrate(config.vibrationPattern);
+            } else {
+                document.getElementById('ar-overlay').innerHTML = '';
+                activeDragonBall = null;
+            }
+        }
+
+        function getDistanceInMeters(lat1, lon1, lat2, lon2) {
+            const R = 6371e3;
+            const φ1 = lat1 * Math.PI / 180;
+            const φ2 = lat2 * Math.PI / 180;
+            const Δφ = (lat2 - lat1) * Math.PI / 180;
+            const Δλ = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                      Math.cos(φ1) * Math.cos(φ2) *
+                      Math.sin(Δλ/2) * Math.sin(Δλ/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        function showFoundBallModal() {
+            if (!activeDragonBall) return;
+            const foundBall = document.getElementById('found-ball');
+            foundBall.setAttribute('data-stars', activeDragonBall.stars);
+            document.getElementById('stars-count').textContent = 
+                `${activeDragonBall.stars}-Star Dragon Ball`;
+            document.getElementById('ball-found-modal').classList.add('active');
+        }
+
+        function collectDragonBall() {
+            if (!activeDragonBall) return;
+            activeDragonBall.collected = true;
+            collectedBalls++;
+            document.getElementById('collected-count').textContent = collectedBalls;
+            const slot = document.querySelector(`.ball-slot[data-stars="${activeDragonBall.stars}"]`);
+            slot.innerHTML = `<div class="dragon-ball" data-stars="${activeDragonBall.stars}"></div>`;
+            document.getElementById('ball-found-modal').classList.remove('active');
+            document.getElementById('ar-overlay').innerHTML = '';
+            if (config.debugMode && activeDragonBall.marker) activeDragonBall.marker.setMap(null);
+            activeDragonBall = null;
+            if (collectedBalls === 7) setTimeout(showSummonShenronModal, 1000);
+            else setTimeout(() => switchView('collection'), 500);
+        }
+
+        function showSummonShenronModal() {
+            document.getElementById('wish-modal').classList.add('active');
+        }
+
+        function restartGame() {
+            collectedBalls = 0;
+            document.getElementById('collected-count').textContent = '0';
+            document.querySelectorAll('.ball-slot').forEach(slot => {
+                slot.innerHTML = '<div class="empty-ball"></div>';
+            });
+            generateDragonBalls();
+            placeDragonBallsOnMap();
+            document.getElementById('wish-modal').classList.remove('active');
+            switchView('map');
+        }
+    </script>
+</body>
+</html>
